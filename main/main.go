@@ -3,57 +3,78 @@ package main
 import (
 	"../tictacgo"
 	"fmt"
+	"strings"
 )
 
-func takeTurn (p1, p2 *tictacgo.Player) {
-	tictacgo.RenderBoard(*p1, *p2)
-	fmt.Printf("%s, move? ", p1.Name)
+func takeTurn (g *tictacgo.Game, isx bool) {
+	tictacgo.RenderBoard(*g)
+	fmt.Printf("%s, move? ", g.PlayerName(isx))
+
 	var cell uint
 	_,err := fmt.Scanln(&cell)
 	cell--
-	err = tictacgo.Move(p1, p2, cell)
+	err = g.Move(isx, cell)
 	if err != nil {
 		fmt.Println(err.Error())
-		takeTurn(p1,p2)
+		takeTurn(g,isx)
 	}
 }
 
-func playGame (p1, p2 *tictacgo.Player) {
-	winner := tictacgo.Winner(p1, p2)
+func playGame (g *tictacgo.Game) {
+	winner := g.Winner()
 	if winner == "none" {
-		takeTurn(p1,p2)
-		winner = tictacgo.Winner(p1, p2)
+		takeTurn(g,true)
+		winner = g.Winner()
 		if winner == "none" {
-			takeTurn(p2, p1)
-			winner = tictacgo.Winner(p2, p1)
+			takeTurn(g, false)
+			winner = g.Winner()
 		}
 	}
 	if winner != "none" {
 		fmt.Println("The winner is", winner)
-		tictacgo.RenderBoard(*p1,*p2)
+		tictacgo.RenderBoard(*g)
 	} else {
-		playGame(p1,p2)
+		playGame(g)
 	}
 }
 
-func main() {
-	tictacgo.InitWins()
-	var name string
-	var p1, p2 tictacgo.Player
-	fmt.Printf("Player 1 name: ")
+func getName(prompt string, askxo bool) (bool, string) {
+	name := prompt
+	isx := askxo
+	fmt.Printf("%s name: ", prompt)
 	_,err := fmt.Scanln(&name)
 	if err  != nil {
 		fmt.Println("Got error", err.Error())
-		return
+		return false, ""
 	}
-	tictacgo.InitPlayer(&p1, name, true)
-	fmt.Printf("Player 2 name: ")
-	_,err = fmt.Scanln(&name)
-	if err  != nil {
-		fmt.Println("Got error", err.Error())
-		return
+	for  ; askxo;  {
+		xo := "X"
+		fmt.Printf("do you want X or O? [X] ")
+		n,err := fmt.Scanln(&xo)
+		if err != nil {
+	        isx = true
+	        askxo = false
+			fmt.Println("Got error", err.Error())
+		} else if n == 1 && strings.Contains("XxOo", xo) {
+			isx = strings.Contains("xX",xo)
+			askxo = false
+		} else {
+			fmt.Println("Enter only X or O")
+		}
 	}
-	tictacgo.InitPlayer(&p2, name, false)
-    playGame (&p1, &p2)
+	return isx, name
+}
+
+func main() {
+	isx,p1name := getName("Player 1", true)
+	_,p2name := getName("Player 2", false)
+	g := new(tictacgo.Game)
+	if isx {
+		g.SetNames(p1name, p2name)
+	} else {
+		g.SetNames(p2name, p1name)
+	}
+
+    playGame (g)
 
 }
